@@ -1,10 +1,31 @@
-import { Schema, model } from "mongoose";
+const mongoose = require('mongoose')
 
-const Cafe = new Schema({
-
+const pointSchema = mongoose.Schema({
+    name: String,
+    location: {
+        type: String,
+        enum: ['Point'],
+        required: true
+    },
+    coordinates: {
+        type: [Number],
+        required: true
+    }
 });
 
-Cafe.index();
+const Cafe = mongoose.Schema({
+    name: { type: String, required: true },
+    TotalOfTables: { type: Number, default: 0 },
+    TotalOflPlugs: { type: Number, default: 0 },
+    openTime: { type: String, default: "" },
+    closeTime: { type: String, default: "" },
+    loaction: {
+        type: pointSchema,
+        required: true,
+        index: 'Point'
+    }
+});
+
 
 Cafe.static.create = function (payload) {
     const cafe = new this(payload);
@@ -15,5 +36,5 @@ Cafe.statics.findAll = function () {
     return this.find();
 }
 
-const CafeModel = model("Cafe", Cafe);
-export { CafeModel };
+
+module.exports = mongoose.model("Cafe", Cafe);
