@@ -1,8 +1,10 @@
-const mongoose = require('mongoose')
+import {
+    Schema,
+    model,
+} from "mongoose";
 
-const pointSchema = mongoose.Schema({
-    name: String,
-    location: {
+const Point = new Schema({
+    type: {
         type: String,
         enum: ['Point'],
         required: true
@@ -13,28 +15,65 @@ const pointSchema = mongoose.Schema({
     }
 });
 
-const Cafe = mongoose.Schema({
-    name: { type: String, required: true },
-    TotalOfTables: { type: Number, default: 0 },
-    TotalOflPlugs: { type: Number, default: 0 },
-    openTime: { type: String, default: "" },
-    closeTime: { type: String, default: "" },
-    loaction: {
-        type: pointSchema,
-        required: true,
-        index: 'Point'
+const Table = new Schema(
+    {
+        typeOfTable: {
+            type: String,
+            default: "",
+        },
+        countOfSeat: {
+            type: Number,
+            default: 0,
+        },
+        countOfPlugs: {
+            type: Number,
+            default: 0,
+        },
+        countOfTables: {
+            type: Number,
+            default: 0,
+        }
+    },
+    {
+        versionKey: false,
     }
-});
+)
 
+const schema = new Schema(
+    {
+        name: {
+            type: String,
+            required: true
+        },
+        TotalOfTables: {
+            type: Number,
+            default: 0
+        },
+        TotalOfPlugs: {
+            type: Number,
+            default: 0
+        },
+        openTime: {
+            type: String,
+            default: ""
+        },
+        closeTime: {
+            type: String,
+            default: ""
+        },
+        tables: {
+            type: [Table],
+            default: [],
+        },
+        location: {
+            type: Point,
+            required: true,
+            index: '2dsphere'
+        }
+    },
+    {
+        versionKey: false,
+    }
+)
 
-Cafe.static.create = function (payload) {
-    const cafe = new this(payload);
-    return cafe.save();
-};
-
-Cafe.statics.findAll = function () {
-    return this.find();
-}
-
-
-module.exports = mongoose.model("Cafe", Cafe);
+export const Cafe = model("cafe", schema);
