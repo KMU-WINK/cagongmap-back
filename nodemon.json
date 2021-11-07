@@ -1,0 +1,15 @@
+{
+    "env": {
+        "NODE_ENV": "development"
+    },
+    "exec": "NODE_ENV=dev babel-node ./src/server.js",
+    "ignore": [
+        "*.test.js"
+    ],
+    "inspect": true,
+    "verbose": true,
+    "watch": [
+        "src",
+        ".env"
+    ]
+}
