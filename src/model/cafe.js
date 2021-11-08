@@ -3,6 +3,8 @@ import {
     model,
 } from "mongoose";
 
+export const TypeOfTables = ['single', 'double', 'bar'];
+
 const Point = new Schema({
     type: {
         type: String,
@@ -19,11 +21,8 @@ const Table = new Schema(
     {
         typeOfTable: {
             type: String,
-            default: "",
-        },
-        countOfSeat: {
-            type: Number,
-            default: 0,
+            enum: TypeOfTables,
+            required: true
         },
         countOfPlugs: {
             type: Number,
