@@ -11,5 +11,5 @@ export const errorHander = (
     res,
     next,
 ) => {
-    return res.status(500).send(`${err.name}: ${err.message}`);
+    return res.status(500).json({ status: 'error', message: err.message });
 };
