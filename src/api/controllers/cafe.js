@@ -41,7 +41,7 @@ export const findCafeController = async (req, res) => {
     const lat = req.query.lat; //경도
 
     if (lng == undefined || lat == undefined) {
-        throw Error("give  coordinats");
+        throw Error("give coordinats");
     }
 
     iscoordinatesValid([lng, lat]);
@@ -49,12 +49,12 @@ export const findCafeController = async (req, res) => {
     const range = req.query.range === undefined ? 1000 : req.query.range;
     var page = 0;
     var perPage = 10;
-    if (!isEmptyObject(req.body) && Object.keys(req.body).length == 2) {
+    if (Object.keys(req.body).length == 2) {
         page = req.body.page;
         perPage = req.body.perPage;
     }
     const typeOfTable = req.query.typeOfTable;
-    const countOfPlug = req.query.countOfPlug;
+    let countOfPlug = req.query.countOfPlug;
 
     const documents = await Cafe.findCafe(
         lng, lat, range, typeOfTable, countOfPlug, page, perPage);
@@ -64,12 +64,21 @@ export const findCafeController = async (req, res) => {
 }
 
 export const getTablesController = async (req, res) => {
-    const cafeId = req.query.id;
+    const cafeId = req.params.id;
     if (cafeId == undefined) {
         throw Error("need a id");
     }
     const documents = await Cafe.getTables(cafeId);
     res.status(200).json({ status: "ok", data: documents });
+}
+
+export const getCafeTableController = async (req, res) => {
+    const cafeId = req.params.cafeId;
+    const tableId = req.params.tableId;
+    const document = await Cafe.getCafeTable(cafeId, tableId);
+    if (Object.keys(document) === 0)
+        throw Error("not exists");
+    res.status(200).json({ status: "ok", data: document });
 }
 
 export const addNewController = async (req, res) => {
@@ -100,7 +109,8 @@ export const addNewController = async (req, res) => {
 
 // todo return documents
 export const addNewTableController = async (req, res) => {
-    const cafeId = req.query.id;
+    const cafeId = req.params.id;
+
     if (cafeId == undefined) {
         throw Error("need a cafe id");
     }
@@ -108,9 +118,11 @@ export const addNewTableController = async (req, res) => {
     if (Object.keys(table).keys() < 2) {
         throw Error("need more data");
     }
-    if (!(table.typeOfTable in ['single', 'bar', 'double'])) {
+    if (!(['single', 'bar', 'double'].includes(table.typeOfTable))) {
         throw Error("typeOfTable is not in " + TypeOfTables);
     }
+    const document = await Cafe.addNewTable(cafeId, table);
+    res.status(201).json({ status: "ok", data: document });
 }
 
 export const updateController = async (req, res) => {

@@ -3,6 +3,55 @@ import {
     Table
 } from "src/model/cafe";
 
+import { Types } from "mongoose";
+
+
+const updateCafeSum = async (cafeId) => {
+    let document = await Cafe.aggregate([
+        {
+            "$match": {
+                "_id": Types.ObjectId(cafeId)
+            }
+        },
+        {
+            "$project": {
+                "tables": 1
+            }
+        },
+        { $unwind: "$tables" },
+        {
+            "$project": {
+                "tables.countOfTables": 1,
+                "tables.countOfPlugs": 1,
+                "multiply": {
+                    "$multiply": [
+                        "$tables.countOfTables",
+                        "$tables.countOfPlugs"
+                    ]
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": cafeId,
+                "TotalOfPlugs": {
+                    "$sum": "$multiply"
+                },
+                "TotalOfTables": {
+                    "$sum": "$tables.countOfTables"
+                }
+            }
+        }
+    ]).exec();
+    if (document === {}) {
+        return {};
+    }
+    document = await Cafe.updateOne({ _id: cafeId }, {
+        $set: { TotalOfTables: document.TotalOfTables, TotalOfPlugs: document.TotalOfPlugs }
+    });
+    return document;
+}
+
 /* 
     todo
     impl : [getCafeTable, updateCafeTable, deleteCafeTable]
@@ -17,14 +66,7 @@ export const getById = async (cafeId) => {
 };
 
 export const findCafe = async (lng, lat, range, typeOfTable, countOfPlug, page, perPage) => {
-    let elematch = {};
-    if (typeOfTable != undefined) {
-        elematch.typeOfTable = typeOfTable;
-    }
-    if (countOfPlug != undefined) {
-        elematch.countOfPlug = countOfPlug;
-    }
-    const documents = await Cafe.find({
+    let query = {
         location: {
             $near: {
                 $geometry: {
@@ -34,22 +76,62 @@ export const findCafe = async (lng, lat, range, typeOfTable, countOfPlug, page, 
                 $maxDistance: range
             }
         },
-        tables: { $eleMatch: elematch }
-    }).skip(page * perPage).limit(perPage).exec();
+    };
+    let elemMatch = {};
+    if (typeOfTable != undefined) {
+        elemMatch.typeOfTable = typeOfTable;
+    }
+    if (countOfPlug != undefined) {
+        elemMatch.countOfPlug = countOfPlug;
+    }
+    if (Object.keys(elemMatch) != 0) {
+        query.tables = {};
+        query.tables.$elemMatch = elemMatch;
+    }
+
+    const documents = await Cafe.find(query).skip(page * perPage).limit(perPage).exec();
     return documents;
 }
 
 export const getTables = async (cafeId) => {
-    const doesCafeExist = await Cafe.exists({ _id: cafeId }).exec();
+    const doesCafeExist = await Cafe.exists({ _id: cafeId });
     if (!doesCafeExist) {
         return undefined;
     }
-    return await Cafe.findById(cafeId).select('tables').exec();
+    return await Cafe.findById(cafeId).select('tables');
 };
 
 // /cafe/:cafeId/tables/:tableId
 export const getCafeTable = async (cafeId, tableId) => {
+    const tableExists = await Cafe.find({
+        _id: cafeId,
+        tables: { $elemMatch: { _id: tableId } }
+    });
+    if (!tableExists) {
+        return {};
+    }
+    const document = await Cafe.aggregate([
+        {
+            $match: {
 
+                _id: Types.ObjectId(cafeId)
+            }
+        }, {
+            $project: {
+                "tables": 1, "_id": 0
+            }
+        }, {
+            $unwind: {
+                path: "$tables"
+            }
+        }, {
+            $match: {
+                "tables._id": Types.ObjectId(tableId)
+            }
+        }]
+    ).exec();
+    console.log(document);
+    return document;
 };
 
 // POST
@@ -73,18 +155,22 @@ export const addNewTable = async (cafeId, table) => {
     const doseCafeHasTable = await Cafe.exists({
         _id: cafeId,
         tables: {
-            $eleMatch: { typeOfTable: typeOfTable }
+            $elemMatch:
+                { typeOfTable: typeOfTable }
         }
     });
+    console.log(doseCafeHasTable);
 
     if (doseCafeHasTable) {
-        return `cafe has ${typeOfTable}`;
+        return `cafe already has ${typeOfTable}`;
     }
-    Cafe.updateOne(
+
+    await Cafe.updateOne(
         { _id: cafeId },
         { $push: { tables: table } }
-    );
-    return "ok";
+    ).exec();
+    const document = await updateCafeSum(cafeId);
+    return document.tables;
 }
 
 // UPDATE
@@ -98,7 +184,33 @@ export const update = async (cafeId, body) => {
 }
 
 // /cafe/:cafeId/tables/:tableId
-export const updateCafeTable = async (cafeId, tableId, table) => { };
+// 수정 및 테스트 필요
+export const updateCafeTable = async (cafeId, tableId, table) => {
+    const doesCafeExist = await Cafe.exists({ _id: cafeId });
+    if (!doesCafeExist) {
+        return "cafe not exists";
+    }
+    const doseCafeHasTable = await Cafe.exists({
+        _id: cafeId,
+        tables: {
+            $elemMatch:
+                { _id: tableId }
+        }
+    });
+
+    if (!doseCafeHasTable) {
+        return `cafe hasn't ${tableId}`;
+    }
+
+    // 바꾸려는 게 typeofTable인경우 처리
+
+    const doucment = await Table.updateOne({
+        _id: tableId
+    }, { $set: table }).exec();
+
+    await updateCafeSum(cafeId);
+    return doucment;
+};
 
 // DELETE
 export const deleteCafe = async (cafeId) => {
@@ -111,4 +223,26 @@ export const deleteCafe = async (cafeId) => {
 }
 
 // /cafe/:cafeId/tables/:tableId
-export const deleteCafeTable = async (cafeId, tableId, table) => { };
+// 수정 및 테스트 필요
+export const deleteCafeTable = async (cafeId, tableId) => {
+    const doesCafeExist = await Cafe.exists({ _id: cafeId });
+    if (!doesCafeExist) {
+        return "cafe not exists";
+    }
+    const doseCafeHasTable = await Cafe.exists({
+        _id: cafeId,
+        tables: {
+            $elemMatch:
+                { _id: tableId }
+        }
+    });
+
+    if (!doseCafeHasTable) {
+        return `cafe hasn't ${tableId}`;
+    }
+
+    await Cafe.deleteOne({
+        _id: cafeId
+    }, { $pull: { tables: { $elemMatch: { _id: tableId } } } });
+    return "ok";
+};

@@ -17,9 +17,9 @@ apiRouter
 
 apiRouter
     .get('/cafes', asyncHandler(Cafe.findCafeController))
-    .use(errorHander);
-
-apiRouter
     .post('/cafes', asyncHandler(Cafe.addNewController))
+    .post('/cafes/:id/tables', asyncHandler(Cafe.addNewTableController))
+    .get('/cafes/:id/tables', asyncHandler(Cafe.getTablesController))
+    .get('/cafes/:cafeId/tables/:tableId', asyncHandler(Cafe.getCafeTableController))
     .use(errorHander);
 
