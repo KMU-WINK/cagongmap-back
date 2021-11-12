@@ -63,7 +63,7 @@ export const getById = async (cafeId) => {
     return await Cafe.findById(cafeId).exec();
 };
 
-export const findCafe = async (lng, lat, range, typeOfTable, countOfPlug, page, perPage) => {
+export const findCafe = async (lng, lat, range, typeOfTable, countOfPlugs, plugsGreaterThanTwo, page, perPage) => {
     let query = {
         location: {
             $near: {
@@ -79,8 +79,11 @@ export const findCafe = async (lng, lat, range, typeOfTable, countOfPlug, page, 
     if (typeOfTable != null) {
         elemMatch.typeOfTable = typeOfTable;
     }
-    if (countOfPlug != null) {
-        elemMatch.countOfPlug = countOfPlug;
+    if (countOfPlugs != null) {
+        elemMatch.countOfPlugs = parseInt(countOfPlugs);
+    }
+    if (plugsGreaterThanTwo) {
+        elemMatch.countOfPlugs = { $gt: 2 };
     }
     if (Object.keys(elemMatch) != 0) {
         query.tables = {};

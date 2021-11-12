@@ -22,7 +22,7 @@ export const getByIdController = async (req, res) => {
         throw Error("need a id");
     }
     const document = await Cafe.getById(cafeId);
-    if (document == {}) {
+    if (document == null) {
         throw Error("not exist");
     }
     res.status(200).json({ status: "ok", data: document });
@@ -52,10 +52,16 @@ export const findCafeController = async (req, res) => {
         perPage = req.body.perPage;
     }
     const typeOfTable = req.query.typeOfTable;
-    const countofPlugs = req.query.countOfPlug;
+    const countOfPlugs = req.query.countOfPlugs;
+    const plugsGreaterThanTwo = req.query.plugsGreaterThanTwo == 'true' ? true : req.query.plugsGreaterThanTwo;
+    if (countOfPlugs != null &&
+        plugsGreaterThanTwo != null &&
+        plugsGreaterThanTwo) {
+        throw Error("choose one option");
+    }
 
     const documents = await Cafe.findCafe(
-        lng, lat, range, typeOfTable, countofPlugs, page, perPage);
+        lng, lat, range, typeOfTable, countOfPlugs, plugsGreaterThanTwo, page, perPage);
 
     if (documents.length == 0) {
         res.status(200).json({ status: "ok", data: "cafe doesn't exists" });
