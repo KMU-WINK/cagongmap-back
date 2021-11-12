@@ -26,7 +26,7 @@ const Table = new Schema(
         },
         countOfPlugs: {
             type: Number,
-            default: 0,
+            required: true
         },
         countOfTables: {
             type: Number,
@@ -44,11 +44,11 @@ const schema = new Schema(
             type: String,
             required: true
         },
-        TotalOfTables: {
+        totalOfTables: {
             type: Number,
             default: 0
         },
-        TotalOfPlugs: {
+        totalOfPlugs: {
             type: Number,
             default: 0
         },
@@ -73,6 +73,6 @@ const schema = new Schema(
     {
         versionKey: false,
     }
-)
+);
 
 export const Cafe = model("cafe", schema);
