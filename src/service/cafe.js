@@ -6,6 +6,20 @@ import { Types } from "mongoose";
 
 const { ObjectId } = Types;
 
+export class NotExists extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'NotExists';
+    }
+};
+
+export class AlreadyExists extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'AlreadyExists';
+    }
+};
+
 
 // further do : reduce api per query
 
@@ -60,7 +74,11 @@ const updateCafeSum = async (cafeId) => {
 
 // GET
 export const getById = async (cafeId) => {
-    return await Cafe.findById(cafeId).exec();
+    const document = await Cafe.findById(cafeId).exec();
+    if (document == null) {
+        throw new NotExists("cafe not exists");
+    }
+    return document;
 };
 
 export const findCafe = async (lng, lat, range, typeOfTable, countOfPlugs, plugsGreaterThanTwo, page, perPage) => {
@@ -91,26 +109,22 @@ export const findCafe = async (lng, lat, range, typeOfTable, countOfPlugs, plugs
     }
 
     const documents = await Cafe.find(query).skip(page * perPage).limit(perPage).exec();
+    if (documents.length <= 0) {
+        throw new NotExists("cafes not exist");
+    }
     return documents;
 }
 
 export const getTables = async (cafeId) => {
-    const doesCafeExist = await Cafe.exists({ _id: cafeId });
-    if (!doesCafeExist) {
-        return "cafe doesn't exists";
+    const documents = await Cafe.findById(cafeId).select('tables');
+    if (documents == null || documents.length <= 0) {
+        throw new NotExists("cafe doesn't exists");
     }
     return await Cafe.findById(cafeId).select('tables');
 };
 
 // /cafe/:cafeId/tables/:tableId
 export const getCafeTable = async (cafeId, tableId) => {
-    const tableExists = await Cafe.exists({
-        _id: cafeId,
-        tables: { $elemMatch: { _id: tableId } }
-    });
-    if (!tableExists) {
-        return "table is not exists";
-    }
     const document = await Cafe.aggregate([
         {
             $match: {
@@ -130,6 +144,9 @@ export const getCafeTable = async (cafeId, tableId) => {
             }
         }]
     ).exec();
+    if (document == null || document.length <= 0) {
+        throw new NotExists("tables or cafe not exist");
+    }
     return document;
 };
 
@@ -138,55 +155,52 @@ export const addNew = async (cafe) => {
     cafe.location = { type: 'Point', coordinates: cafe.location.coordinates };
     const doesCafeExist = await Cafe.exists({ name: cafe.name });
     if (doesCafeExist) {
-        return "cafe already exist";
+        throw new AlreadyExists("cafe already exist");
     }
     const document = await Cafe.create(cafe);
     return document;
 }
 
-// /cafe/cafeId/tables
 export const addNewTable = async (cafeId, table) => {
     const doesCafeExist = await Cafe.exists({ _id: cafeId });
     if (!doesCafeExist) {
-        return "cafe not exists";
+        throw new AlreadyExists("cafe not exists");
     }
     const typeOfTable = table.typeOfTable;
-    const countOfPlug = table.countOfPlug;
+    const countOfPlugs = table.countOfPlugs;
     const doseCafeHasTable = await Cafe.exists({
         _id: cafeId,
         tables: {
             $elemMatch:
             {
                 typeOfTable: typeOfTable,
-                countOfPlug: countOfPlug
+                countOfPlugs: countOfPlugs
             }
         }
     });
 
     if (doseCafeHasTable) {
-        return `cafe already has ${typeOfTable}, that has ${countplug} plugs`;
+        throw new AlreadyExists(`cafe already has ${typeOfTable}, that has ${countOfPlugs} plugs`);
     }
 
     await Cafe.updateOne(
         { _id: cafeId },
         { $push: { tables: table } }
     ).exec();
-    const document = await updateCafeSum(cafeId);
-    return document.tables;
+    await updateCafeSum(cafeId);
+    return;
 }
 
 // UPDATE
 export const update = async (cafeId, cafe) => {
     const doesCafeExist = await Cafe.exists({ _id: cafeId });
     if (!doesCafeExist) {
-        return "cafe not exists";
+        throw new NotExists("cafe not exists");
     }
     await Cafe.updateOne({ _id: cafeId }, { $set: cafe }).exec();
     return true;
 }
 
-// /cafe/:cafeId/tables/:tableId
-// 수정 및 테스트 필요
 export const updateCafeTable = async (cafeId, tableId, table) => {
     const doesCafeHasTable = await Cafe.exists({
         _id: cafeId,
@@ -198,7 +212,7 @@ export const updateCafeTable = async (cafeId, tableId, table) => {
     });
 
     if (!doesCafeHasTable) {
-        return `cafe hasn't ${tableId}`;
+        throw new NotExists(`cafe hasn't ${tableId}`);
     }
 
     let set = {};
@@ -212,36 +226,34 @@ export const updateCafeTable = async (cafeId, tableId, table) => {
             tables: {
                 $elemMatch: {
                     typeOfTable: table.typeOfTable,
-                    countOfPlug: table.countOfPlug
+                    countOfPlugs: table.countOfPlugs
                 }
             }
         });
 
         if (doesCafeHasTable) {
-            return `cafe already has ${typeOfTable}, that has ${countplug} plugs`;
+            throw new AlreadyExists(`cafe already has ${table.typeOfTable}, that has ${table.countOfPlug} plugs`);
         }
     }
 
-    const document = await Cafe.updateOne({
+    Cafe.updateOne({
         _id: cafeId, "tables._id": tableId
     }, { $set: set }).exec();
 
     await updateCafeSum(cafeId);
-    return document;
+    return;
 };
 
 // DELETE
 export const deleteCafe = async (cafeId) => {
     const doesCafeExist = await Cafe.exists({ _id: cafeId });
     if (!doesCafeExist) {
-        return "cafe not exist";
+        throw new NotExists("cafe not exist");
     }
     await Cafe.deleteOne({ _id: cafeId }).exec();
     return true;
 }
 
-// /cafe/:cafeId/tables/:tableId
-// 수정 및 테스트 필요
 export const deleteCafeTable = async (cafeId, tableId) => {
     const doseCafeHasTable = await Cafe.exists({
         _id: cafeId,
@@ -252,7 +264,7 @@ export const deleteCafeTable = async (cafeId, tableId) => {
     });
 
     if (!doseCafeHasTable) {
-        return `cafe hasn't ${tableId}`;
+        throw new NotExists(`cafe hasn't ${tableId}`);
     }
 
     const document = await Cafe.updateOne({ _id: cafeId }, {

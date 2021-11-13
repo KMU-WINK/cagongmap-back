@@ -3,13 +3,20 @@ import {
     TypeOfTables
 } from 'src/model/cafe';
 
+export class ValidationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ValidationError';
+    }
+};
+
 
 const iscoordinatesValid = (coordinates) => {
     const [lng, lat] = coordinates;
-    if (-180 > lng && lng > 180) {
+    if (-180 > lng || lng > 180) {
         return false;
     }
-    if (-90 > lat && lat > 90) {
+    if (-90 > lat || lat > 90) {
         return false;
     }
     return true;
@@ -19,29 +26,26 @@ const iscoordinatesValid = (coordinates) => {
 export const getByIdController = async (req, res) => {
     const cafeId = req.params.cafeId;
     if (cafeId == null) {
-        throw Error("need a id");
+        throw new new ValidationError("need a id");
     }
     const document = await Cafe.getById(cafeId);
-    if (document == null) {
-        throw Error("not exist");
-    }
     res.status(200).json({ status: "ok", data: document });
 };
 
 export const findCafeController = async (req, res) => {
     const countOfQueries = Object.keys(req.query).length;
     if (countOfQueries < 2) {
-        throw Error("need parameters");
+        throw new ValidationError("need parameters");
     }
     const lng = req.query.lng; //위도
     const lat = req.query.lat; //경도
 
     if (lng == undefined || lat == undefined) {
-        throw Error("need coordinats");
+        throw new ValidationError("need coordinats");
     }
 
     if (!iscoordinatesValid([lng, lat])) {
-        throw Error("coordinates out of range");
+        throw new ValidationError("coordinates out of range");
     }
 
     const range = req.query.range === undefined ? 1000 : req.query.range;
@@ -57,16 +61,11 @@ export const findCafeController = async (req, res) => {
     if (countOfPlugs != null &&
         plugsGreaterThanTwo != null &&
         plugsGreaterThanTwo) {
-        throw Error("choose one option");
+        throw new ValidationError("choose one option");
     }
 
     const documents = await Cafe.findCafe(
         lng, lat, range, typeOfTable, countOfPlugs, plugsGreaterThanTwo, page, perPage);
-
-    if (documents.length == 0) {
-        res.status(200).json({ status: "ok", data: "cafe doesn't exists" });
-        return;
-    }
 
     res.status(200).json({ status: "ok", data: documents });
     return;
@@ -75,12 +74,9 @@ export const findCafeController = async (req, res) => {
 export const getTablesController = async (req, res) => {
     const cafeId = req.params.cafeId;
     if (cafeId === undefined) {
-        throw Error("need a id");
+        throw new ValidationError("need a id");
     }
     const documents = await Cafe.getTables(cafeId);
-    if (typeof documents == "string") {
-        throw Error(documents);
-    }
     res.status(200).json({ status: "ok", data: documents });
 }
 
@@ -88,31 +84,29 @@ export const getCafeTableController = async (req, res) => {
     const cafeId = req.params.cafeId;
     const tableId = req.params.tableId;
     const document = await Cafe.getCafeTable(cafeId, tableId);
-    if (typeof document == "string")
-        throw Error(document);
     res.status(200).json({ status: "ok", data: document });
 }
 
 export const addNewController = async (req, res) => {
     if (Object.keys(req.body).length < 2) {
-        throw Error("need more data");
+        throw new ValidationError("need more data");
     }
     if (req.body.location == null ||
         req.body.location.coordinates == null ||
         req.body.location.coordinates.length != 2) {
-        throw Error("need coordinates of Cafe");
+        throw new ValidationError("need coordinates of Cafe");
     }
 
     if (!iscoordinatesValid(req.body.location.coordinates)) {
-        throw Error("coordinates out of range");
+        throw new ValidationError("coordinates out of range");
     }
 
     if (req.body.name == null || req.body.name === "") {
-        throw Error("need a name of Cafe");
+        throw new ValidationError("need a name of Cafe");
     }
 
-    if (req.body.tables != null || req.body.TotlaOfPlugs != null || req.body.TotlaOfTables) {
-        throw Error("can not inputs table data");
+    if (req.body.tables != null || req.body.totlaOfPlugs != null || req.body.totlaOfTables) {
+        throw new ValidationError("can not inputs table data");
     }
 
     req.body.location = {
@@ -122,34 +116,27 @@ export const addNewController = async (req, res) => {
 
     const document = await Cafe.addNew(req.body);
 
-    if (document instanceof String) {
-        throw Error(document);
-    }
     res.status(201).json({ status: "ok", data: document });
 };
 
-// todo return documents
 export const addNewTableController = async (req, res) => {
     const cafeId = req.params.cafeId;
 
     if (cafeId == undefined) {
-        throw Error("need a cafe id");
+        throw new ValidationError("need a cafe id");
     }
     const table = req.body;
-    if (Object.keys(table).keys() <= 2) {
-        throw Error("need more data");
+    if (Object.keys(table).length <= 1) {
+        throw new ValidationError("need more data");
     }
     if (!(['single', 'bar', 'double'].includes(table.typeOfTable))) {
-        throw Error("typeOfTable is not in " + TypeOfTables);
+        throw new ValidationError("typeOfTable is not in " + TypeOfTables);
     }
     if (table.countOfPlugs == null) {
-        throw Error('need countOfPlugs');
+        throw new ValidationError('need countOfPlugs');
     }
-    const document = await Cafe.addNewTable(cafeId, table);
-    if (typeof document == "string") {
-        throw Error(document);
-    }
-    res.status(201).json({ status: "ok", data: document });
+    await Cafe.addNewTable(cafeId, table);
+    res.status(201).json({ status: "ok" });
 }
 
 export const patchController = async (req, res) => {
@@ -158,14 +145,17 @@ export const patchController = async (req, res) => {
 
     // valid
     if (cafeId == null) {
-        throw Error("need id");
+        throw new ValidationError("need id");
     }
     if (Object.keys(cafe).length === 0) {
-        throw Error("need data");
+        throw new ValidationError("need data");
     }
     if (cafe.location != null) {
+        if (cafe.location.coordinates.length < 2) {
+            throw new ValidationError("need right coordinates of Cafe");
+        }
         if (!iscoordinatesValid(req.body.location.coordinates)) {
-            throw Error("need right coordinates of Cafe");
+            throw new ValidationError("need right coordinates of Cafe");
         }
         cafe.location = {
             type: 'Point',
@@ -175,31 +165,23 @@ export const patchController = async (req, res) => {
 
 
     if (cafe.tables != null) {
-        throw Error("tables cannot change");
+        throw new ValidationError("tables cannot change");
     }
-    if (cafe.TotlaOfTables != null || cafe.TotlaOfPlugs != null) {
-        throw Error("TotalOfTables or TotalOfPlugs cannot change")
+    if (cafe.totalOfTables != null || cafe.totalOfPlugs != null) {
+        throw new ValidationError("totalOfTables or totalOfPlugs cannot change")
     }
 
-
-    const document = await Cafe.update(cafeId, cafe);
-    if (typeof document == "string") {
-        throw Error(document);
-    }
+    await Cafe.update(cafeId, cafe);
     res.status(200).json({ status: "ok" });
 }
 
-// todo patch /cafe/:cafeId/tables/:tableId
 export const patchCafeTableController = async (req, res) => {
     const cafeId = req.params.cafeId;
     const tableId = req.params.tableId;
     if (Object.keys(req.body) == 0) {
-        throw Error("need data");
+        throw new ValidationError("need data");
     }
-    const document = await Cafe.updateCafeTable(cafeId, tableId, req.body);
-    if (document instanceof String) {
-        throw Error(document);
-    }
+    await Cafe.updateCafeTable(cafeId, tableId, req.body);
     res.status(200).json({ status: "ok" });
 }
 
@@ -207,25 +189,18 @@ export const deleteController = async (req, res) => {
     const cafeId = req.params.cafeId;
     // valid
     if (cafeId == null) {
-        throw Error("need id");
+        throw new ValidationError("need id");
     }
-    const document = await Cafe.deleteCafe(cafeId);
-    if (typeof document == "string") {
-        throw Error(document);
-    }
+    await Cafe.deleteCafe(cafeId);
     res.status(200).json({ status: "ok" });
 };
 
-// todo delete /cafe/cafeId/tables/tableId
 export const deleteCafeTableController = async (req, res) => {
     const cafeId = req.params.cafeId;
     const tableId = req.params.tableId;
     if (cafeId == null || tableId == null) {
-        throw Error("need id");
+        throw new ValidationError("need id");
     }
-    const document = await Cafe.deleteCafeTable(cafeId, tableId);
-    if (document instanceof String) {
-        throw Error(document);
-    }
+    await Cafe.deleteCafeTable(cafeId, tableId);
     res.status(200).json({ status: "ok" });
 };
