@@ -87,6 +87,12 @@ export const getCafeTableController = async (req, res) => {
     res.status(200).json({ status: "ok", data: document });
 }
 
+export const getCafeImagesController = async (req, res) => {
+    const cafeId = req.params.cafeId;
+    const documents = await Cafe.getCafeImages(cafeId);
+    res.status(200).json({ status: "ok", data: documents });
+}
+
 export const addNewController = async (req, res) => {
     if (Object.keys(req.body).length < 2) {
         throw new ValidationError("need more data");
@@ -136,6 +142,17 @@ export const addNewTableController = async (req, res) => {
         throw new ValidationError('need countOfPlugs');
     }
     await Cafe.addNewTable(cafeId, table);
+    res.status(201).json({ status: "ok" });
+}
+
+export const addNewImageController = async (req, res) => {
+    const cafeId = req.params.cafeId;
+    const image = req.body;
+    if (Object.keys(image).length <= 1) {
+        throw new ValidationError("need more data");
+    }
+
+    await Cafe.addNewImage(cafeId, image);
     res.status(201).json({ status: "ok" });
 }
 

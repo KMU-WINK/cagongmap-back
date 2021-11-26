@@ -68,6 +68,10 @@ const schema = new Schema(
             type: Point,
             required: true,
             index: '2dsphere'
+        },
+        images: {
+            type: [String],
+            default: []
         }
     },
     {

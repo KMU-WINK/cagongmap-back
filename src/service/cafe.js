@@ -120,7 +120,7 @@ export const getTables = async (cafeId) => {
     if (documents == null || documents.length <= 0) {
         throw new NotExists("cafe doesn't exists");
     }
-    return await Cafe.findById(cafeId).select('tables');
+    return documents;
 };
 
 // /cafe/:cafeId/tables/:tableId
@@ -148,6 +148,15 @@ export const getCafeTable = async (cafeId, tableId) => {
         throw new NotExists("tables or cafe not exist");
     }
     return document;
+};
+
+// /cafes/:cafeId/images
+export const getCafeImages = async (cafeId) => {
+    const documents = await Cafe.findById(cafeId).select('images');
+    if (documents == null || documents <= 0) {
+        throw new NotExists("images doesn't exists");
+    }
+    return documents;
 };
 
 // POST
@@ -188,6 +197,23 @@ export const addNewTable = async (cafeId, table) => {
         { $push: { tables: table } }
     ).exec();
     await updateCafeSum(cafeId);
+    return;
+}
+
+export const addNewImage = async (cafeId, image) => {
+    const doesCafeExist = await Cafe.exists({ _id: cafeId });
+    if (!doesCafeExist) {
+        throw new AlreadyExists("cafe not exists");
+    }
+    const imageURL = image.image;
+    const doseCafeHasImage = await Cafe.exists({
+        _id: cafeId,
+        images: imageURL
+    });
+    if (doseCafeHasImage) {
+        throw new AlreadyExists(`cafe already has image : ${imageURL}`);
+    }
+    await Cafe.updateOne({ _id: cafeId }, { $push: { images: imageURL } });
     return;
 }
 
