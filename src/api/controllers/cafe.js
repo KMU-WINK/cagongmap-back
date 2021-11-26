@@ -148,7 +148,7 @@ export const addNewTableController = async (req, res) => {
 export const addNewImageController = async (req, res) => {
     const cafeId = req.params.cafeId;
     const image = req.body;
-    if (Object.keys(image).length <= 1) {
+    if (Object.keys(image).length <= 0) {
         throw new ValidationError("need more data");
     }
 
