@@ -72,6 +72,10 @@ const schema = new Schema(
         images: {
             type: [String],
             default: []
+        },
+        place: {
+            type: String,
+            default: "",
         }
     },
     {

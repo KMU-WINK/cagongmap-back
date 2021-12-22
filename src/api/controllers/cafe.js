@@ -93,6 +93,12 @@ export const getCafeImagesController = async (req, res) => {
     res.status(200).json({ status: "ok", data: documents });
 }
 
+export const getPlaceController = async (req, res) => {
+    const cafeId = req.params.cafeId;
+    const document = await Cafe.getCafePlace(cafeId);
+    res.status(200).json({ status: "ok", data: document });
+}
+
 export const addNewController = async (req, res) => {
     if (Object.keys(req.body).length < 2) {
         throw new ValidationError("need more data");
@@ -153,6 +159,16 @@ export const addNewImageController = async (req, res) => {
     }
 
     await Cafe.addNewImage(cafeId, image);
+    res.status(201).json({ status: "ok" });
+}
+
+export const addNewPlaceController = async (req, res) => {
+    const cafeId = req.params.cafeId;
+    const place = req.body;
+    if (Object.keys(place).length <= 0) {
+        throw new ValidationError("need more data");
+    }
+    await Cafe.addNewPlace(cafeId, place);
     res.status(201).json({ status: "ok" });
 }
 

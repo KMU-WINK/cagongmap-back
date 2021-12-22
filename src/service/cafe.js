@@ -159,6 +159,15 @@ export const getCafeImages = async (cafeId) => {
     return documents;
 };
 
+// /cafes/:cafeId/place
+export const getCafePlace = async (cafeId) => {
+    const document = await Cafe.findById(cafeId).select('place');
+    if (document == null) {
+        throw new NotExists("place doesn't exists");
+    }
+    return document;
+};
+
 // POST
 export const addNew = async (cafe) => {
     cafe.location = { type: 'Point', coordinates: cafe.location.coordinates };
@@ -203,7 +212,7 @@ export const addNewTable = async (cafeId, table) => {
 export const addNewImage = async (cafeId, image) => {
     const doesCafeExist = await Cafe.exists({ _id: cafeId });
     if (!doesCafeExist) {
-        throw new AlreadyExists("cafe not exists");
+        throw new NotExists("cafe not exists");
     }
     const imageURL = image.image;
     const doseCafeHasImage = await Cafe.exists({
@@ -214,6 +223,23 @@ export const addNewImage = async (cafeId, image) => {
         throw new AlreadyExists(`cafe already has image : ${imageURL}`);
     }
     await Cafe.updateOne({ _id: cafeId }, { $push: { images: imageURL } });
+    return;
+}
+
+export const addNewPlace = async (cafeId, place) => {
+    const doesCafeExist = await Cafe.exists({ _id: cafeId });
+    if (!doesCafeExist) {
+        throw new NotExists("cafe not exists");
+    }
+    const placeURL = place.place;
+    const doseCafeHasPlace = await Cafe.exists({
+        _id: cafeId,
+        place: placeURL
+    });
+    if (doseCafeHasPlace) {
+        throw new AlreadyExists(`cafe already has place : ${placeURL}`);
+    }
+    await Cafe.updateOne({ _id: cafeId }, { place: placeURL });
     return;
 }
 

@@ -15,10 +15,12 @@ apiRouter
     .get('/cafes/:cafeId/tables', asyncHandler(Cafe.getTablesController))
     .get('/cafes/:cafeId/tables/:tableId', asyncHandler(Cafe.getCafeTableController))
     .get('/cafes/:cafeId/images', asyncHandler(Cafe.getCafeImagesController))
+    .get('/cafes/:cafeId/place', asyncHandler(Cafe.getPlaceController))
 
     .post('/cafes', asyncHandler(Cafe.addNewController))
     .post('/cafes/:cafeId/tables', asyncHandler(Cafe.addNewTableController))
     .post('/cafes/:cafeId/images', asyncHandler(Cafe.addNewImageController))
+    .post('/cafes/:cafeId/place', asyncHandler(Cafe.addNewPlaceController))
 
     .delete('/cafes/:cafeId', asyncHandler(Cafe.deleteController))
     .delete('/cafes/:cafeId/tables/:tableId', asyncHandler(Cafe.deleteCafeTableController))
